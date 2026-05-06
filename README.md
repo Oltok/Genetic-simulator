@@ -1,2 +1,3 @@
 # Genetic-simulator
+Te estarás preguntando qué es esto...
 es un genetic simulator
