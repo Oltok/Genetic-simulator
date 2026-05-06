@@ -1,2 +1,2 @@
-# Cosa-chula
-es una cosa chula
+# Genetic-simulator
+es un genetic simulator
