@@ -2,12 +2,12 @@
 TARGET = simulation 
 
 # Compiler and Flags
-CC = gcc
+CC = gpp
 CFLAGS = -Wall -Wno-missing-braces -I.
 LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 # Source files (all .c files in the directory)
-SRC = $(wildcard *.c)
+SRC = $(wildcard *.cpp)
 OBJ = $(SRC:.c=.o)
 
 # Default Rule
@@ -18,7 +18,7 @@ $(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 # Compile source files into object files
-%.o: %.c
+%.o: %.cpp
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 # Clean up build files
