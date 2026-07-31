@@ -1,8 +1,9 @@
 #include <raylib.h>
+#include <raymath.h> //mate y maticas
 #include <vector>
 
 
-const ADN_LENGTH = 10
+const int ADN_LENGTH = 10;
 
 class Entity 
 {
@@ -11,14 +12,17 @@ public:
     Vector3 size;
     Color color;
 
-    //void Move()
 };
 
 
 class Brain
 {
 public:
-    char genes[ADN_LENGTH]
+    char genes[ADN_LENGTH];
+    
+    Vector3 Destiny() {
+        return (Vector3){(float)GetRandomValue(-450,450), 1.0f, (float)GetRandomValue(-450, 450)}; //aleatorio
+    }
 };
 
 
@@ -27,6 +31,45 @@ class Gubi : public Entity // lo que tenga la clase Gubi tmb tiene la clase Enti
 public:
 
     Brain brain;
+    Vector3 targetPosition;
+    bool isMoving;
+    float speed;
+
+    Gubi() {    //inicializar las variables
+
+        position = (Vector3){0.0f, 1.0f, 0.0f};
+        size = (Vector3){2.0f, 2.0f, 2.0f};
+        color = RED;
+        targetPosition = position;
+        isMoving = false;
+        speed = 15.0f;
+    }
+
+    void MoveTo(float deltaTime) { //delta time es la constante temporal
+
+        if (!isMoving) return;
+
+        Vector3 direction = Vector3Subtract(targetPosition, position);
+        direction.y = 0.0; //si no se le va la olla al cabrón
+
+        //para que sea más óptimo he visto que se puede usar el cuadrado en lugar de la raíz para calcular la distancia
+        float distancia = Vector3LengthSqr(direction);
+        float thrLlegada = 0.01f; //para definir si ha llegado a la posición, está al cuadrado
+
+        if (distancia <= thrLlegada) {
+
+            position.x = targetPosition.x;
+            position.z = targetPosition.z;
+            isMoving = false;
+            return;
+        }
+
+        direction = Vector3Normalize(direction);
+
+        position.x += direction.x * speed * deltaTime;
+        position.z += direction.z * speed * deltaTime;
+
+    }
 };
 
 
@@ -64,9 +107,6 @@ int main(void){
     camera.projection = CAMERA_PERSPECTIVE;
 
     Gubi Juanubi;
-    Juanubi.size = (Vector3){2.0f, 2.0f, 2.0f};
-    Juanubi.position = (Vector3){0.0f, 1.0f, 0.0f};
-    Juanubi.color = RED;
 
     std::vector<Charco> charcos;
 
@@ -138,6 +178,13 @@ int main(void){
         }
 
         if (IsKeyPressed(KEY_Z)) camera.target = (Vector3){ 0.0f, 0.0f, 0.0f};
+    
+        if (!Juanubi.isMoving) {
+            Juanubi.targetPosition = Juanubi.brain.Destiny();
+            Juanubi.isMoving = true;
+        }
+
+        Juanubi.MoveTo(GetFrameTime());
 
         BeginDrawing();
             ClearBackground(SKYBLUE);
@@ -149,6 +196,12 @@ int main(void){
 
                     DrawPlane(agua.position, agua.size, agua.color);
 
+                }
+                
+                // para ver donde va (me ayuda al debugging)
+                if (Juanubi.isMoving) {
+                    DrawLine3D(Juanubi.position, Juanubi.targetPosition, PURPLE);
+                    DrawSphere(Juanubi.targetPosition, 0.5f, PURPLE);
                 }
 
                 DrawCubeV(Juanubi.position, Juanubi.size, Juanubi.color);
