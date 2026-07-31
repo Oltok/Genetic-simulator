@@ -1,26 +1,53 @@
 #include <raylib.h>
 #include <vector>
 
-typedef struct {
+
+const ADN_LENGTH = 10
+
+class Entity 
+{
+public:
     Vector3 position;
     Vector3 size;
     Color color;
-} Gubi;
 
-typedef struct {
+    //void Move()
+};
+
+
+class Brain
+{
+public:
+    char genes[ADN_LENGTH]
+};
+
+
+class Gubi : public Entity // lo que tenga la clase Gubi tmb tiene la clase Entity. Por si queremos mas criaturas despues
+{
+public:
+
+    Brain brain;
+};
+
+
+class Arbol 
+{
+public:
 
     Vector3 position;
     Vector3 size;
     Color color;
-} Arbol;
+};
 
-typedef struct {
+class Charco
+{
+public:
 
     Vector3 position;
     Vector2 size;
     Color color;
 
-} Charco;
+};
 
 int main(void){
 
