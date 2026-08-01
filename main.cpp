@@ -3,6 +3,7 @@
 #include <vector>
 
 
+
 const int ADN_LENGTH = 10;
 
 class Entity 
@@ -78,8 +79,13 @@ class Arbol
 public:
 
     Vector3 position;
-    Vector3 size;
-    Color color;
+    Model model;
+
+    void Draw() const{
+        DrawModel(model, position, 1, WHITE);
+        //DrawModelWires(model, position, 1, BLACK);
+    }
+    
 };
 
 class Charco
@@ -96,9 +102,21 @@ int main(void){
 
     const int screenWidth = 800;
     const int screenHeight = 450;
+    
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
 
+    //model loading - se ve que debe ir despues del InitWindow
+
+    //en este caso no se carga la textura porque en el modelo.mtl ya se referencia
+    Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
+    
+    //Para cargar textura y ponerla al modelo:
+    //Texture2D tree_texture = LoadTexture("resources/models/arbol/base_color.png");
+    //tree_model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = tree_texture;
+
+
+    // camera init    
     Camera3D camera = { 0 };
     camera.position = (Vector3){0.0f, 10.0f, 20.0f};
     camera.target = (Vector3){0.0f, 0.0f, 0.0f};
@@ -126,25 +144,19 @@ int main(void){
     for (int i = 0; i < 250; i++) {
                     
         Arbol arbo;
-        arbo.size = (Vector3){5.0f, 15.0f, 5.0f};
-        arbo.color = BLACK;
+        arbo.model = tree_model;
         
         bool posicionwena = false;
 
         while (!posicionwena) {
 
-            arbo.position = (Vector3){(float)GetRandomValue(-450, 450), arbo.size.y / 2.0f, (float)GetRandomValue(-450, 450)};
+            arbo.position = (Vector3){(float)GetRandomValue(-450, 450), 0.0, (float)GetRandomValue(-450, 450)};
 
-            BoundingBox cajaarbo = {
-
-                (Vector3){arbo.position.x - arbo.size.x/2.0f, arbo.position.y - arbo.size.y/2.0f, arbo.position.z - arbo.size.z/2.0f},
-                (Vector3){arbo.position.x + arbo.size.x/2.0f, arbo.position.y + arbo.size.y/2.0f, arbo.position.z + arbo.size.z/2.0f}
-            };
+            BoundingBox cajaarbo = GetModelBoundingBox(arbo.model); //aqui falta sumarle la posicion
 
             bool colisionagua = false;
 
-            for (const auto&agua : charcos) {
-
+            for (const auto &agua : charcos){
                 BoundingBox cajacharco = {
 
                     (Vector3){ agua.position.x - agua.size.x/2.0f, 0.0f, agua.position.z - agua.size.y/2.0f },
@@ -209,8 +221,7 @@ int main(void){
 
                 for (const auto &arbo : arboles) {
 
-                    DrawCubeV(arbo.position, arbo.size, arbo.color);
-                    DrawCubeWiresV(arbo.position, arbo.size, DARKGRAY);
+                    arbo.Draw();
                 }
 
             EndMode3D();
@@ -218,6 +229,8 @@ int main(void){
         
         EndDrawing();
     }
+
+    UnloadModel(tree_model);
 
     CloseWindow();
 
