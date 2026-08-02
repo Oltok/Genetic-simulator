@@ -1,10 +1,14 @@
-#include <cstdio>
+//#include <cstdio>
+#include <string>
 #include <raylib.h>
 #include <raymath.h> //mate y maticas
 #include <vector>
 
+#include "ui_util.h"
+
 
 const int ADN_LENGTH = 10;
+std::string selected_speed = "x1";  //afuera para que al dibujar el boton pueda detectar cual esta activo
 
 class Entity 
 {
@@ -129,6 +133,7 @@ int main(void){
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
+
     Gubi Juanubi;
 
     std::vector<Charco> charcos;
@@ -199,9 +204,9 @@ int main(void){
         }
 
         if (IsKeyPressed(KEY_Z)) camera.target = (Vector3){ 0.0f, 0.0f, 0.0f};
-        if (IsKeyPressed(KEY_ONE)) SetTargetFPS(60);
-        if (IsKeyPressed(KEY_TWO)) SetTargetFPS(120);
-        if (IsKeyPressed(KEY_THREE)) SetTargetFPS(240);
+        if (IsKeyPressed(KEY_ONE)) {SetTargetFPS(60); selected_speed = "x1";}
+        if (IsKeyPressed(KEY_TWO)) {SetTargetFPS(120); selected_speed = "x2";}
+        if (IsKeyPressed(KEY_THREE)) {SetTargetFPS(240); selected_speed = "x4";}
     
         if (!Juanubi.isMoving) {
             Juanubi.targetPosition = Juanubi.brain.Destiny();
@@ -237,8 +242,10 @@ int main(void){
                 }
 
             EndMode3D();
+            //DrawSpeedButton((10, 10), "x1")
+            //DrawSpeedButton((50, 10), "x2")
+            //DrawSpeedButton((90, 10), "x4")
 
-        
         EndDrawing();
     }
 
