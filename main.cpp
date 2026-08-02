@@ -1,7 +1,7 @@
+#include <cstdio>
 #include <raylib.h>
 #include <raymath.h> //mate y maticas
 #include <vector>
-
 
 
 const int ADN_LENGTH = 10;
@@ -22,7 +22,7 @@ public:
     char genes[ADN_LENGTH];
     
     Vector3 Destiny() {
-        return (Vector3){(float)GetRandomValue(-450,450), 1.0f, (float)GetRandomValue(-450, 450)}; //aleatorio
+        return (Vector3){(float)GetRandomValue(-100,100), 1.0f, (float)GetRandomValue(-100, 100)}; //aleatorio
     }
 };
 
@@ -43,10 +43,10 @@ public:
         color = RED;
         targetPosition = position;
         isMoving = false;
-        speed = 15.0f;
+        speed = 0.4f;
     }
 
-    void MoveTo(float deltaTime) { //delta time es la constante temporal
+    void MoveTo() { 
 
         if (!isMoving) return;
 
@@ -55,10 +55,9 @@ public:
 
         //para que sea más óptimo he visto que se puede usar el cuadrado en lugar de la raíz para calcular la distancia
         float distancia = Vector3LengthSqr(direction);
-        float thrLlegada = 0.01f; //para definir si ha llegado a la posición, está al cuadrado
+        float thrLlegada = 0.1f; //para definir si ha llegado a la posición, está al cuadrado
 
         if (distancia <= thrLlegada) {
-
             position.x = targetPosition.x;
             position.z = targetPosition.z;
             isMoving = false;
@@ -67,8 +66,10 @@ public:
 
         direction = Vector3Normalize(direction);
 
-        position.x += direction.x * speed * deltaTime;
-        position.z += direction.z * speed * deltaTime;
+        //Al quitar deltatime, la velocidad depende de los frames
+        //entonces si subimos los FPS, corremos la simulacion a mas velocidad :D
+        position.x += direction.x * speed; 
+        position.z += direction.z * speed; 
 
     }
 };
@@ -107,12 +108,14 @@ int main(void){
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
 
-    //model loading - se ve que debe ir despues del InitWindow
 
-    //en este caso no se carga la textura porque en el modelo.mtl ya se referencia
+    //model loading - se ve que debe ir despues del InitWindow
+    
     Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
     BoundingBox base_tree_bbox = GetModelBoundingBox(tree_model);
     
+
+    //en este caso no se carga la textura porque en el modelo.mtl ya se referencia
     //Para cargar textura y ponerla al modelo:
     //Texture2D tree_texture = LoadTexture("resources/models/arbol/base_color.png");
     //tree_model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = tree_texture;
@@ -153,6 +156,7 @@ int main(void){
 
             arbo.position = (Vector3){(float)GetRandomValue(-450, 450), (float)GetRandomValue(-2, 1), (float)GetRandomValue(-450, 450)};
 
+            //La BBox original esta en 0,0,0. Creamos una nueva y le sumamos la posicion del arbol que creamos.
             BoundingBox cajaarbo;
             cajaarbo.max = Vector3Add(base_tree_bbox.max, arbo.position);
             cajaarbo.min = Vector3Add(base_tree_bbox.min,  arbo.position);
@@ -195,13 +199,16 @@ int main(void){
         }
 
         if (IsKeyPressed(KEY_Z)) camera.target = (Vector3){ 0.0f, 0.0f, 0.0f};
+        if (IsKeyPressed(KEY_ONE)) SetTargetFPS(60);
+        if (IsKeyPressed(KEY_TWO)) SetTargetFPS(120);
+        if (IsKeyPressed(KEY_THREE)) SetTargetFPS(240);
     
         if (!Juanubi.isMoving) {
             Juanubi.targetPosition = Juanubi.brain.Destiny();
             Juanubi.isMoving = true;
         }
 
-        Juanubi.MoveTo(GetFrameTime());
+        Juanubi.MoveTo();
 
         BeginDrawing();
             ClearBackground(SKYBLUE);

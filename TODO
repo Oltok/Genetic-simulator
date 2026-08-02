@@ -1,2 +1,5 @@
 todo lista:
 -GenImageCellular o GenImagePerlinNoise para terreno con alturas o podemos hacer height map a mano
+    - Podemos hacer que las alturas sean mas frias o cosas asi. Que tengan propiedades diferentes
+
+-Generacion de arboles basada en una distribucion gaussiana por ejemplo. Asi tenemos como zonas/biomas
