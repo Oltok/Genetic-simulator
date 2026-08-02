@@ -80,6 +80,7 @@ public:
 
     Vector3 position;
     Model model;
+    BoundingBox bbox;
 
     void Draw() const{
         DrawModel(model, position, 1, WHITE);
@@ -110,6 +111,7 @@ int main(void){
 
     //en este caso no se carga la textura porque en el modelo.mtl ya se referencia
     Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
+    BoundingBox base_tree_bbox = GetModelBoundingBox(tree_model);
     
     //Para cargar textura y ponerla al modelo:
     //Texture2D tree_texture = LoadTexture("resources/models/arbol/base_color.png");
@@ -147,12 +149,15 @@ int main(void){
         arbo.model = tree_model;
         
         bool posicionwena = false;
-
         while (!posicionwena) {
 
-            arbo.position = (Vector3){(float)GetRandomValue(-450, 450), 0.0, (float)GetRandomValue(-450, 450)};
+            arbo.position = (Vector3){(float)GetRandomValue(-450, 450), (float)GetRandomValue(-2, 1), (float)GetRandomValue(-450, 450)};
 
-            BoundingBox cajaarbo = GetModelBoundingBox(arbo.model); //aqui falta sumarle la posicion
+            BoundingBox cajaarbo;
+            cajaarbo.max = Vector3Add(base_tree_bbox.max, arbo.position);
+            cajaarbo.min = Vector3Add(base_tree_bbox.min,  arbo.position);
+
+            arbo.bbox = cajaarbo;
 
             bool colisionagua = false;
 
