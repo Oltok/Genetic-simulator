@@ -1,4 +1,4 @@
 #include <raylib.h>
 #include <string>
 
-void DrawSpeedButton(Vector2, std::string);
+void DrawSpeedButton(float, float, std::string, std::string);

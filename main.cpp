@@ -8,7 +8,6 @@
 
 
 const int ADN_LENGTH = 10;
-std::string selected_speed = "x1";  //afuera para que al dibujar el boton pueda detectar cual esta activo
 
 class Entity 
 {
@@ -59,7 +58,7 @@ public:
 
         //para que sea más óptimo he visto que se puede usar el cuadrado en lugar de la raíz para calcular la distancia
         float distancia = Vector3LengthSqr(direction);
-        float thrLlegada = 0.1f; //para definir si ha llegado a la posición, está al cuadrado
+        float thrLlegada = 0.3f; //para definir si ha llegado a la posición, está al cuadrado
 
         if (distancia <= thrLlegada) {
             position.x = targetPosition.x;
@@ -190,7 +189,7 @@ int main(void){
         arboles.push_back(arbo);
     }
 
-    
+    std::string selected_speed = "x1";
     
     DisableCursor();
     SetTargetFPS(60);
@@ -204,6 +203,8 @@ int main(void){
         }
 
         if (IsKeyPressed(KEY_Z)) camera.target = (Vector3){ 0.0f, 0.0f, 0.0f};
+
+        //simulation speed
         if (IsKeyPressed(KEY_ONE)) {SetTargetFPS(60); selected_speed = "x1";}
         if (IsKeyPressed(KEY_TWO)) {SetTargetFPS(120); selected_speed = "x2";}
         if (IsKeyPressed(KEY_THREE)) {SetTargetFPS(240); selected_speed = "x4";}
@@ -242,9 +243,10 @@ int main(void){
                 }
 
             EndMode3D();
-            //DrawSpeedButton((10, 10), "x1")
-            //DrawSpeedButton((50, 10), "x2")
-            //DrawSpeedButton((90, 10), "x4")
+
+            DrawSpeedButton(10.0, 10.0, "x1", selected_speed);
+            DrawSpeedButton(50.0, 10.0, "x2", selected_speed);
+            DrawSpeedButton(90.0, 10.0, "x4", selected_speed);
 
         EndDrawing();
     }
