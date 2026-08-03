@@ -4,6 +4,7 @@
 #include <raymath.h> //mate y maticas
 #include <vector>
 
+#include "rcamera.h" //con comillas para incluir el que tenemos en el directorio
 #include "ui_util.h"
 
 
@@ -25,7 +26,7 @@ public:
     char genes[ADN_LENGTH];
     
     Vector3 Destiny() {
-        return (Vector3){(float)GetRandomValue(-100,100), 1.0f, (float)GetRandomValue(-100, 100)}; //aleatorio
+        return (Vector3){(float)GetRandomValue(400,600), 1.0f, (float)GetRandomValue(400, 600)}; //aleatorio
     }
 };
 
@@ -103,6 +104,19 @@ public:
 
 };
 
+
+float find_height(Mesh mesh, float x, float z){
+    Ray ray = {
+        {x, 0, z},
+        {0, 1, 0}
+    };
+
+    
+    RayCollision info = GetRayCollisionMesh(ray, mesh, MatrixIdentity());
+    return info.distance;
+};
+
+
 int main(void){
 
     const int screenWidth = 800;
@@ -112,11 +126,26 @@ int main(void){
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
 
 
+    //Terrain generation
+    const float terrainWidth = 2000.0f;
+    const float terrainDepth = 2000.0f;
+    const float terrainMaxHeight = 1000.0f;
+    const int terrainImgWidth = 100;
+    const int terrainImgHeight = 100;
+
+    Image terrainHeightMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 0, 0, 1);
+    Mesh terrainMesh = GenMeshHeightmap(terrainHeightMap, {terrainWidth, terrainMaxHeight, terrainDepth});
+
+    UnloadImage(terrainHeightMap); //Como la malla ya esta generada podemos liberar de la memoria la imagen
+    Model terrainModel = LoadModelFromMesh(terrainMesh);
+    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = LIME;
+
+
     //model loading - se ve que debe ir despues del InitWindow
     
+    //Arbol
     Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
     BoundingBox base_tree_bbox = GetModelBoundingBox(tree_model);
-    
 
     //en este caso no se carga la textura porque en el modelo.mtl ya se referencia
     //Para cargar textura y ponerla al modelo:
@@ -126,22 +155,26 @@ int main(void){
 
     // camera init    
     Camera3D camera = { 0 };
-    camera.position = (Vector3){0.0f, 10.0f, 20.0f};
+    camera.position = (Vector3){terrainWidth/2, terrainMaxHeight+10, terrainDepth/2};
     camera.target = (Vector3){0.0f, 0.0f, 0.0f};
     camera.up = (Vector3){0.0f, 1.0f, 0.0f};
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
 
+    //cosas en el mundo
+    int n_arboles = 500;
+    int n_charcos = 10;
+
     Gubi Juanubi;
 
     std::vector<Charco> charcos;
 
-    for (int i = 0; i< 10; i++) {
+    for (int i = 0; i < n_charcos; i++) {
 
         Charco agua;
         agua.size = (Vector2){(float)GetRandomValue(20, 150), (float)GetRandomValue(20, 150)};
-        agua.position = (Vector3){(float)GetRandomValue(-350, 350), 1.0f,  (float)GetRandomValue(-350, 350)};
+        agua.position = (Vector3){(float)GetRandomValue(0, terrainWidth), 1.0f,  (float)GetRandomValue(0, terrainDepth)};
         agua.color = BLUE;
         
         charcos.push_back(agua);
@@ -149,8 +182,9 @@ int main(void){
 
 
     std::vector<Arbol> arboles;
+    
 
-    for (int i = 0; i < 250; i++) {
+    for (int i = 0; i < n_arboles; i++) {
                     
         Arbol arbo;
         arbo.model = tree_model;
@@ -158,7 +192,11 @@ int main(void){
         bool posicionwena = false;
         while (!posicionwena) {
 
-            arbo.position = (Vector3){(float)GetRandomValue(-450, 450), (float)GetRandomValue(-2, 1), (float)GetRandomValue(-450, 450)};
+            float pos_x = (float)GetRandomValue(0, terrainWidth);
+            float pos_z = (float)GetRandomValue(0, terrainDepth);
+        
+            //encontramos la altura en esa posicion y la variamos un poco para tener arboles con diferentes alturas
+            arbo.position = (Vector3){pos_x, find_height(terrainMesh, pos_x, pos_z)+GetRandomValue(-1, 1), pos_z};
 
             //La BBox original esta en 0,0,0. Creamos una nueva y le sumamos la posicion del arbol que creamos.
             BoundingBox cajaarbo;
@@ -197,7 +235,7 @@ int main(void){
     while (!WindowShouldClose())
     {
         if (IsKeyDown(KEY_LEFT_SHIFT)) {
-            for (int i = 0; i < 10; i++) UpdateCamera(&camera, CAMERA_FREE);
+            for (int i = 0; i < 5; i++) UpdateCamera(&camera, CAMERA_FREE);
         } else {
             UpdateCamera(&camera, CAMERA_FREE);
         }
@@ -220,8 +258,10 @@ int main(void){
             ClearBackground(SKYBLUE);
             BeginMode3D(camera);
             
-                DrawPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){1000.0f, 1000.0f}, GREEN);
-                
+                //DrawPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){1000.0f, 1000.0f}, GREEN);
+                DrawModel(terrainModel, Vector3Zero(), 1, WHITE);
+                DrawModelWires(terrainModel, Vector3Zero(), 1, GREEN);
+
                 for (const auto &agua : charcos) {
 
                     DrawPlane(agua.position, agua.size, agua.color);
@@ -251,7 +291,7 @@ int main(void){
         EndDrawing();
     }
 
-    UnloadModel(tree_model);
+    UnloadModel(tree_model); //Pongo el unload fuera del loop porque seguiremos spawneando
 
     CloseWindow();
 
