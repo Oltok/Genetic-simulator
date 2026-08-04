@@ -6,19 +6,13 @@
 
 #include "rcamera.h" //con comillas para incluir el que tenemos en el directorio
 #include "ui_util.h"
+#include "bioma.h"
 
 //func declaration para poder usarlas donde sea -- Despues podriamos hacer un file que contenga todas las declaraciones globales
 float find_height(Mesh*, float, float);
 
 
 //const and variables -- Despues podriamos hacer un file que contenga todas las declaraciones globales
-//terrain
-const float terrainWidth = 100.0f; //2000, 2000, 1000, 100, 100
-const float terrainDepth = 100.0f;
-const float terrainMaxHeight = 100.0f;
-const int terrainImgWidth = 10;
-const int terrainImgHeight = 10;
-const int terrainBarrier = 10;
 
 const int ADN_LENGTH = 10;
 Mesh* pTerrainMesh;
@@ -156,14 +150,93 @@ int main(void){
 
 
     //Terrain generation
-    Image terrainHeightMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 0, 0, 1.2);
+    Image terrainHeightMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 0, 0, 1.2f);
+    Image temperatureMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 1000, 500, 1.2f); //meto offsets random a mano en cada mapa par que no coincidan
+    Image humidityMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, -500, 2000, 1.2f);
+    Image qualityMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 3000, -1000, 1.2f);
+    Image quantityMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 50, 8000, 1.2f);
     Mesh terrainMesh = GenMeshHeightmap(terrainHeightMap, {terrainWidth, terrainMaxHeight, terrainDepth});
     pTerrainMesh = &terrainMesh;
 
-    UnloadImage(terrainHeightMap); //Como la malla ya esta generada podemos liberar de la memoria la imagen
-    Model terrainModel = LoadModelFromMesh(terrainMesh);
-    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = LIME;
+    World::mapWidth = terrainImgWidth;
+    World::mapHeight = terrainImgHeight;
+    World::worldWidth = terrainWidth;
+    World::worldDepth = terrainDepth; 
 
+    //pillar la informacion
+    Color* heightColors = LoadImageColors(terrainHeightMap);
+    Color* temperatureColors = LoadImageColors(temperatureMap);
+    Color* humidityColors = LoadImageColors(humidityMap);
+    Color* qualityColors = LoadImageColors(qualityMap);
+    Color* quantityColors = LoadImageColors(quantityMap);
+
+    World::mapData.resize(terrainImgWidth * terrainImgHeight);
+
+    for (int y = 0; y < terrainImgHeight; y++) {
+        for (int x = 0; x < terrainImgWidth; x++) {
+
+            int index = y * terrainImgWidth + x;
+
+            //normalizar valores 0.0 - 1.0
+            World::mapData[index].height = heightColors[index].r / 255.0f;
+            World::mapData[index].temperature = temperatureColors[index].r / 255.0f;
+            World::mapData[index].humidity = humidityColors[index].r / 255.0f;
+            World::mapData[index].quality = qualityColors[index].r / 255.0f;
+            World::mapData[index].quantity = quantityColors[index].r / 255.0f;
+        }
+    }
+
+    UnloadImageColors(heightColors);
+    UnloadImageColors(temperatureColors);
+    UnloadImageColors(humidityColors);
+    UnloadImageColors(qualityColors);
+    UnloadImageColors(quantityColors);
+
+    UnloadImage(terrainHeightMap); //Como la malla ya esta generada podemos liberar de la memoria la imagen
+    UnloadImage(temperatureMap);
+    UnloadImage(humidityMap);
+    UnloadImage(qualityMap);
+    UnloadImage(quantityMap);
+
+    // generar biomas y hacer 3 iteraciones de smooth
+    World::GenerateBiomes();
+    World::SmoothBiomes(3);
+
+    Model terrainModel = LoadModelFromMesh(terrainMesh);
+    
+    //VISUALIZACION DE BIOMAS (TEXTURA 2D TEMPORAL)
+    Image colormapImage = GenImageColor(World::mapWidth, World::mapHeight, BLANK);
+
+    // pintar cada coordenada dependiendo del bioma
+    for (int y = 0; y < World::mapHeight; y++) {
+        for (int x = 0; x < World::mapWidth; x++) {
+
+            float worldX = ((float) x / World::mapWidth) * World::worldWidth;
+            float worldZ = ((float) y / World::mapHeight) * World::worldDepth;
+
+            BaseBiome biome = World::GetBaseBiome(worldX, worldZ);
+            Color biomeColor = BLACK;
+
+            switch (biome) {
+            case BaseBiome::FIELD: biomeColor = YELLOW; break;
+            case BaseBiome::JUNGLE: biomeColor = GREEN; break;
+            case BaseBiome::DESERT: biomeColor = BROWN; break;
+            case BaseBiome::ICE: biomeColor = WHITE; break;
+            case BaseBiome::TUNDRA: biomeColor = PURPLE; break;
+            case BaseBiome::ACQUATIC: biomeColor = BLUE; break;            
+            default: biomeColor = RED; break;
+            }
+
+            ImageDrawPixel(&colormapImage, x, y, biomeColor);
+        }
+    }
+
+
+    Texture2D terrainTexture = LoadTextureFromImage(colormapImage);
+    UnloadImage(colormapImage);
+
+    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = terrainTexture;
+    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 
     //model loading - se ve que debe ir despues del InitWindow
     //Arbol
@@ -285,7 +358,7 @@ int main(void){
             
                 //DrawPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){1000.0f, 1000.0f}, GREEN);
                 DrawModel(terrainModel, Vector3Zero(), 1, WHITE);
-                DrawModelWires(terrainModel, Vector3Zero(), 1, GREEN);
+                DrawModelWires(terrainModel, Vector3Zero(), 1, LIGHTGRAY);
 
                 for (const auto &agua : charcos) {
 
@@ -317,6 +390,7 @@ int main(void){
     }
 
     UnloadModel(tree_model); //Pongo el unload fuera del loop porque seguiremos spawneando
+    UnloadTexture(terrainTexture);
 
     CloseWindow();
 
