@@ -7,9 +7,24 @@
 #include "rcamera.h" //con comillas para incluir el que tenemos en el directorio
 #include "ui_util.h"
 
+//func declaration para poder usarlas donde sea -- Despues podriamos hacer un file que contenga todas las declaraciones globales
+float find_height(Mesh*, float, float);
+
+
+//const and variables -- Despues podriamos hacer un file que contenga todas las declaraciones globales
+//terrain
+const float terrainWidth = 100.0f; //2000, 2000, 1000, 100, 100
+const float terrainDepth = 100.0f;
+const float terrainMaxHeight = 100.0f;
+const int terrainImgWidth = 10;
+const int terrainImgHeight = 10;
+const int terrainBarrier = 10;
 
 const int ADN_LENGTH = 10;
+Mesh* pTerrainMesh;
 
+
+//CLASS IMPLEMENTATION
 class Entity 
 {
 public:
@@ -25,8 +40,11 @@ class Brain
 public:
     char genes[ADN_LENGTH];
     
-    Vector3 Destiny() {
-        return (Vector3){(float)GetRandomValue(400,600), 1.0f, (float)GetRandomValue(400, 600)}; //aleatorio
+    Vector3 Destiny() {   
+        float pos_x = (float)GetRandomValue(0, terrainWidth - terrainBarrier);
+        float pos_z = (float)GetRandomValue(0, terrainDepth - terrainBarrier);
+        
+        return (Vector3){pos_x, find_height(pTerrainMesh, pos_x, pos_z), pos_z};                          
     }
 };
 
@@ -42,8 +60,12 @@ public:
 
     Gubi() {    //inicializar las variables
 
-        position = (Vector3){0.0f, 1.0f, 0.0f};
         size = (Vector3){2.0f, 2.0f, 2.0f};
+
+        float pos_x = (float)GetRandomValue(0, terrainWidth-terrainBarrier);
+        float pos_z = (float)GetRandomValue(0, terrainDepth-terrainBarrier);
+        position = (Vector3){pos_x, find_height(pTerrainMesh, pos_x, pos_z)+size.y/2, pos_z};
+
         color = RED;
         targetPosition = position;
         isMoving = false;
@@ -69,12 +91,18 @@ public:
         }
 
         direction = Vector3Normalize(direction);
+        Move(direction);
+        
 
-        //Al quitar deltatime, la velocidad depende de los frames
-        //entonces si subimos los FPS, corremos la simulacion a mas velocidad :D
+    }
+
+    //He separado las funciones para tener pathfinding y moverse como tal mas organizado
+    void Move(Vector3 direction){
+
+        //No deltaTime -> velocidad depende de FPS -> +FPS -> +Velocidad :D
         position.x += direction.x * speed; 
         position.z += direction.z * speed; 
-
+        position.y = find_height(pTerrainMesh, position.x, position.z) + size.y/2;
     }
 };
 
@@ -105,14 +133,15 @@ public:
 };
 
 
-float find_height(Mesh mesh, float x, float z){
+//FUNCTION IMPLEMENTATION
+float find_height(Mesh* pMesh, float x, float z){
     Ray ray = {
         {x, 0, z},
         {0, 1, 0}
     };
 
     
-    RayCollision info = GetRayCollisionMesh(ray, mesh, MatrixIdentity());
+    RayCollision info = GetRayCollisionMesh(ray, *pMesh, MatrixIdentity());
     return info.distance;
 };
 
@@ -127,14 +156,9 @@ int main(void){
 
 
     //Terrain generation
-    const float terrainWidth = 2000.0f;
-    const float terrainDepth = 2000.0f;
-    const float terrainMaxHeight = 1000.0f;
-    const int terrainImgWidth = 100;
-    const int terrainImgHeight = 100;
-
-    Image terrainHeightMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 0, 0, 1);
+    Image terrainHeightMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 0, 0, 1.2);
     Mesh terrainMesh = GenMeshHeightmap(terrainHeightMap, {terrainWidth, terrainMaxHeight, terrainDepth});
+    pTerrainMesh = &terrainMesh;
 
     UnloadImage(terrainHeightMap); //Como la malla ya esta generada podemos liberar de la memoria la imagen
     Model terrainModel = LoadModelFromMesh(terrainMesh);
@@ -142,7 +166,6 @@ int main(void){
 
 
     //model loading - se ve que debe ir despues del InitWindow
-    
     //Arbol
     Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
     BoundingBox base_tree_bbox = GetModelBoundingBox(tree_model);
@@ -163,10 +186,12 @@ int main(void){
 
 
     //cosas en el mundo
-    int n_arboles = 500;
-    int n_charcos = 10;
+    int n_arboles = 0; //500
+    int n_charcos = 0; //10
 
     Gubi Juanubi;
+    
+
 
     std::vector<Charco> charcos;
 
@@ -196,7 +221,7 @@ int main(void){
             float pos_z = (float)GetRandomValue(0, terrainDepth);
         
             //encontramos la altura en esa posicion y la variamos un poco para tener arboles con diferentes alturas
-            arbo.position = (Vector3){pos_x, find_height(terrainMesh, pos_x, pos_z)+GetRandomValue(-1, 1), pos_z};
+            arbo.position = (Vector3){pos_x, find_height(pTerrainMesh, pos_x, pos_z)+GetRandomValue(-1, 0), pos_z};
 
             //La BBox original esta en 0,0,0. Creamos una nueva y le sumamos la posicion del arbol que creamos.
             BoundingBox cajaarbo;
