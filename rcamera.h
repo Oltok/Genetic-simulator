@@ -1,5 +1,7 @@
 /*******************************************************************************************
 *
+*   SEBAS: HAZ CONTROL+F "CAMBIO" PARA VER MIS CAMBIOS
+*
 *   rcamera - Basic camera system with support for multiple camera modes
 *
 *   CONFIGURATION:
