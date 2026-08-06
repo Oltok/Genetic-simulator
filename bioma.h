@@ -3,11 +3,11 @@
 #include <raymath.h>
 
 // he pasado las constantes aquí 
-const float terrainWidth = 2000.0f; //2000, 2000, 1000, 100, 100
-const float terrainDepth = 2000.0f;
-const float terrainMaxHeight = 1000.0f;
-const int terrainImgWidth = 100;
-const int terrainImgHeight = 100;
+const float terrainWidth = 100.0f; //2000, 2000, 1000, 100, 100
+const float terrainDepth = 100.0f;
+const float terrainMaxHeight = 80.0f;
+const int terrainImgWidth = 10;
+const int terrainImgHeight = 10;
 const int terrainBarrier = 10;
 
 

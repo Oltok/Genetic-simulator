@@ -10,12 +10,15 @@
 
 //func declaration para poder usarlas donde sea -- Despues podriamos hacer un file que contenga todas las declaraciones globales
 float find_height(Mesh*, float, float);
+Vector3 GetAvgNormal(Vector3, Vector3);
 
 
 //const and variables -- Despues podriamos hacer un file que contenga todas las declaraciones globales
-
-const int ADN_LENGTH = 10;
+Model gubi_model;
+Model tree_model;
 Mesh* pTerrainMesh;
+const int ADN_LENGTH = 10;
+
 
 
 //CLASS IMPLEMENTATION
@@ -47,23 +50,33 @@ class Gubi : public Entity // lo que tenga la clase Gubi tmb tiene la clase Enti
 {
 public:
 
+    Model model;
     Brain brain;
+
     Vector3 targetPosition;
     bool isMoving;
     float speed;
 
     Gubi() {    //inicializar las variables
 
-        size = (Vector3){2.0f, 2.0f, 2.0f};
+        model = gubi_model;
+
+        BoundingBox bbox = GetModelBoundingBox(model);
+        size = bbox.max - bbox.min;
 
         float pos_x = (float)GetRandomValue(0, terrainWidth-terrainBarrier);
         float pos_z = (float)GetRandomValue(0, terrainDepth-terrainBarrier);
         position = (Vector3){pos_x, find_height(pTerrainMesh, pos_x, pos_z)+size.y/2, pos_z};
 
-        color = RED;
         targetPosition = position;
         isMoving = false;
         speed = 0.4f;
+    }
+
+    void Draw() {
+
+        DrawModel(model, position, 1, RED);
+        DrawModelWires(model, position, 1, BLACK);
     }
 
     void MoveTo() { 
@@ -86,17 +99,92 @@ public:
 
         direction = Vector3Normalize(direction);
         Move(direction);
-        
-
     }
-
     //He separado las funciones para tener pathfinding y moverse como tal mas organizado
     void Move(Vector3 direction){
-
-        //No deltaTime -> velocidad depende de FPS -> +FPS -> +Velocidad :D
         position.x += direction.x * speed; 
         position.z += direction.z * speed; 
         position.y = find_height(pTerrainMesh, position.x, position.z) + size.y/2;
+
+        Tilt(); //Para las cuestas
+        LookForward(direction);
+        
+    }
+
+    void Tilt(){
+        Vector3 avgCornerNormals = GetAvgNormal(position, size);
+        Vector3 up = (Vector3){0.0f, 1.0f, 0.0f};
+
+        Vector3 ax = Vector3CrossProduct(up, avgCornerNormals);
+        float angle = Vector3Angle(up, avgCornerNormals);
+
+        if (Vector3LengthSqr(ax) > 0.00001f) {
+            ax = Vector3Normalize(ax);
+            model.transform = MatrixRotate(ax, angle);
+        } else {
+            model.transform = MatrixIdentity(); //por si el terreno es casi plano pa que no se vuelva loco
+        }
+    }
+
+    void LookForward(Vector3 dir){
+        Vector3 forward = (Vector3){0.0f, 0.0f, 1.0f};
+
+        Vector3 ax = Vector3CrossProduct(forward, dir);
+        float angle = Vector3Angle(forward, dir);
+
+        model.transform = MatrixRotate(ax, angle);
+        return;
+    }
+
+    Vector3 GetAvgNormal(Vector3 pos, Vector3 size){
+    
+        float x;
+        float z;
+        float y = 3.0f;
+
+        //top left
+        x = -size.x/2;
+        z = -size.z/2;
+        Ray tl = (Ray){
+        pos+(Vector3){x, -y, z},
+        pos+(Vector3){x, y, z}, 
+        };
+
+        //top right
+        x = size.x/2;
+        z = -size.z/2;
+        Ray tr = (Ray){
+        pos+(Vector3){x, -y, z},
+        pos+(Vector3){x, y, z}, 
+        };
+
+        //bottom left
+        x = -size.x/2;
+        z = size.z/2;
+        Ray bl = (Ray){
+        pos+(Vector3){x, -y, z},
+        pos+(Vector3){x, y, z}, 
+        };
+
+        //bottom right
+        x = size.x/2;
+        z = size.z/2;
+        Ray br = (Ray){
+        pos+(Vector3){x, -y, z},
+        pos+(Vector3){x, y, z}, 
+        };
+
+        Vector3 tlCollision = GetRayCollisionMesh(tl, *pTerrainMesh, MatrixIdentity()).normal;
+        Vector3 trCollision = GetRayCollisionMesh(tr, *pTerrainMesh, MatrixIdentity()).normal;
+        Vector3 blCollision = GetRayCollisionMesh(bl, *pTerrainMesh, MatrixIdentity()).normal;
+        Vector3 brCollision = GetRayCollisionMesh(br, *pTerrainMesh, MatrixIdentity()).normal;
+
+        Vector3 avg = Vector3Add(tlCollision, trCollision);
+        avg = Vector3Add(avg, blCollision);
+        avg = Vector3Add(avg, brCollision);
+        avg = Vector3Normalize(avg);
+
+        return avg;
     }
 };
 
@@ -126,7 +214,6 @@ public:
 
 };
 
-
 //FUNCTION IMPLEMENTATION
 float find_height(Mesh* pMesh, float x, float z){
     Ray ray = {
@@ -139,29 +226,13 @@ float find_height(Mesh* pMesh, float x, float z){
     return info.distance;
 };
 
-
-int main(void){
-
-    const int screenWidth = 800;
-    const int screenHeight = 450;
-    
-
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
-
-
-    //Terrain generation
+Mesh GenTerrainAssignColor()
+{
     Image terrainHeightMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 0, 0, 1.2f);
     Image temperatureMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 1000, 500, 1.2f); //meto offsets random a mano en cada mapa par que no coincidan
     Image humidityMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, -500, 2000, 1.2f);
     Image qualityMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 3000, -1000, 1.2f);
     Image quantityMap = GenImagePerlinNoise(terrainImgWidth, terrainImgHeight, 50, 8000, 1.2f);
-    Mesh terrainMesh = GenMeshHeightmap(terrainHeightMap, {terrainWidth, terrainMaxHeight, terrainDepth});
-    pTerrainMesh = &terrainMesh;
-
-    World::mapWidth = terrainImgWidth;
-    World::mapHeight = terrainImgHeight;
-    World::worldWidth = terrainWidth;
-    World::worldDepth = terrainDepth; 
 
     //pillar la informacion
     Color* heightColors = LoadImageColors(terrainHeightMap);
@@ -169,6 +240,11 @@ int main(void){
     Color* humidityColors = LoadImageColors(humidityMap);
     Color* qualityColors = LoadImageColors(qualityMap);
     Color* quantityColors = LoadImageColors(quantityMap);
+
+    World::mapWidth = terrainImgWidth;
+    World::mapHeight = terrainImgHeight;
+    World::worldWidth = terrainWidth;
+    World::worldDepth = terrainDepth; 
 
     World::mapData.resize(terrainImgWidth * terrainImgHeight);
 
@@ -186,6 +262,8 @@ int main(void){
         }
     }
 
+    Mesh terrainMesh = GenMeshHeightmap(terrainHeightMap, {terrainWidth, terrainMaxHeight, terrainDepth});
+
     UnloadImageColors(heightColors);
     UnloadImageColors(temperatureColors);
     UnloadImageColors(humidityColors);
@@ -197,6 +275,24 @@ int main(void){
     UnloadImage(humidityMap);
     UnloadImage(qualityMap);
     UnloadImage(quantityMap);
+
+    return terrainMesh;
+}
+
+
+
+int main(void){
+
+    const int screenWidth = 800;
+    const int screenHeight = 450;
+    
+
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+
+
+    //Terrain generation
+    Mesh terrainMesh= GenTerrainAssignColor();
+    pTerrainMesh = &terrainMesh;
 
     // generar biomas y hacer 3 iteraciones de smooth
     World::GenerateBiomes();
@@ -214,7 +310,8 @@ int main(void){
             float worldX = ((float) x / World::mapWidth) * World::worldWidth;
             float worldZ = ((float) y / World::mapHeight) * World::worldDepth;
 
-            BaseBiome biome = World::GetBaseBiome(worldX, worldZ);
+            //No podriamos hacer GetBaseBiome antes de pasarlo a coordenadas de mundo?
+            BaseBiome biome = World::GetBaseBiome(worldX, worldZ);   
             Color biomeColor = BLACK;
 
             switch (biome) {
@@ -238,34 +335,34 @@ int main(void){
     terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = terrainTexture;
     terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 
+
     //model loading - se ve que debe ir despues del InitWindow
     //Arbol
     Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
     BoundingBox base_tree_bbox = GetModelBoundingBox(tree_model);
 
-    //en este caso no se carga la textura porque en el modelo.mtl ya se referencia
-    //Para cargar textura y ponerla al modelo:
-    //Texture2D tree_texture = LoadTexture("resources/models/arbol/base_color.png");
-    //tree_model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = tree_texture;
+    //Gubi - Placeholder
+    gubi_model = LoadModel("resources/models/gubi/modelo.obj");
 
 
     // camera init    
     Camera3D camera = { 0 };
-    camera.position = (Vector3){terrainWidth/2, terrainMaxHeight+10, terrainDepth/2};
+    camera.position = (Vector3){
+        terrainWidth/2, 
+        find_height(pTerrainMesh, terrainWidth/2, terrainDepth/2)+50, 
+        terrainDepth/2
+    };
     camera.target = (Vector3){0.0f, 0.0f, 0.0f};
     camera.up = (Vector3){0.0f, 1.0f, 0.0f};
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-
     //cosas en el mundo
     int n_arboles = 0; //500
     int n_charcos = 0; //10
-
+    
     Gubi Juanubi;
     
-
-
     std::vector<Charco> charcos;
 
     for (int i = 0; i < n_charcos; i++) {
@@ -285,7 +382,7 @@ int main(void){
     for (int i = 0; i < n_arboles; i++) {
                     
         Arbol arbo;
-        arbo.model = tree_model;
+        arbo.model = tree_model; //TODO moverlo a su funcion de inizializacion, como la de gubi
         
         bool posicionwena = false;
         while (!posicionwena) {
@@ -329,22 +426,22 @@ int main(void){
     
     DisableCursor();
     SetTargetFPS(60);
-
     while (!WindowShouldClose())
     {
+
         if (IsKeyDown(KEY_LEFT_SHIFT)) {
             for (int i = 0; i < 5; i++) UpdateCamera(&camera, CAMERA_FREE);
         } else {
             UpdateCamera(&camera, CAMERA_FREE);
         }
 
-        if (IsKeyPressed(KEY_Z)) camera.target = (Vector3){ 0.0f, 0.0f, 0.0f};
 
         //simulation speed
         if (IsKeyPressed(KEY_ONE)) {SetTargetFPS(60); selected_speed = "x1";}
         if (IsKeyPressed(KEY_TWO)) {SetTargetFPS(120); selected_speed = "x2";}
         if (IsKeyPressed(KEY_THREE)) {SetTargetFPS(240); selected_speed = "x4";}
-    
+
+
         if (!Juanubi.isMoving) {
             Juanubi.targetPosition = Juanubi.brain.Destiny();
             Juanubi.isMoving = true;
@@ -355,16 +452,16 @@ int main(void){
         BeginDrawing();
             ClearBackground(SKYBLUE);
             BeginMode3D(camera);
-            
-                //DrawPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){1000.0f, 1000.0f}, GREEN);
+                
                 DrawModel(terrainModel, Vector3Zero(), 1, WHITE);
                 DrawModelWires(terrainModel, Vector3Zero(), 1, LIGHTGRAY);
-
+                
                 for (const auto &agua : charcos) {
 
                     DrawPlane(agua.position, agua.size, agua.color);
 
                 }
+
                 
                 // para ver donde va (me ayuda al debugging)
                 if (Juanubi.isMoving) {
@@ -372,8 +469,7 @@ int main(void){
                     DrawSphere(Juanubi.targetPosition, 0.5f, PURPLE);
                 }
 
-                DrawCubeV(Juanubi.position, Juanubi.size, Juanubi.color);
-                DrawCubeWiresV(Juanubi.position, Juanubi.size, BLACK);
+                Juanubi.Draw();
 
                 for (const auto &arbo : arboles) {
 
@@ -382,6 +478,7 @@ int main(void){
 
             EndMode3D();
 
+            //Simulation speed buttons
             DrawSpeedButton(10.0, 10.0, "x1", selected_speed);
             DrawSpeedButton(50.0, 10.0, "x2", selected_speed);
             DrawSpeedButton(90.0, 10.0, "x4", selected_speed);
