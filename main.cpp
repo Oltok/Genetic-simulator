@@ -3,8 +3,10 @@
 #include <raylib.h>
 #include <raymath.h> //mate y maticas
 #include <vector>
+#include<rlgl.h>
 
 #include "rcamera.h" //con comillas para incluir el que tenemos en el directorio
+
 #include "ui_util.h"
 #include "bioma.h"
 
@@ -57,6 +59,8 @@ public:
     bool isMoving;
     float speed;
 
+    Quaternion q;
+
     Gubi() {    //inicializar las variables
 
         model = gubi_model;
@@ -70,7 +74,9 @@ public:
 
         targetPosition = position;
         isMoving = false;
-        speed = 0.4f;
+        speed = 0.1f;
+
+        q = QuaternionFromMatrix(model.transform);
     }
 
     void Draw() {
@@ -99,41 +105,22 @@ public:
 
         direction = Vector3Normalize(direction);
         Move(direction);
+        ApplyRotation(direction);
     }
+
     //He separado las funciones para tener pathfinding y moverse como tal mas organizado
     void Move(Vector3 direction){
         position.x += direction.x * speed; 
         position.z += direction.z * speed; 
-        position.y = find_height(pTerrainMesh, position.x, position.z) + size.y/2;
-
-        Tilt(); //Para las cuestas
-        LookForward(direction);
-        
+        position.y = find_height(pTerrainMesh, position.x, position.z) + size.y/2; 
     }
 
-    void Tilt(){
-        Vector3 avgCornerNormals = GetAvgNormal(position, size);
-        Vector3 up = (Vector3){0.0f, 1.0f, 0.0f};
-
-        Vector3 ax = Vector3CrossProduct(up, avgCornerNormals);
-        float angle = Vector3Angle(up, avgCornerNormals);
-
-        if (Vector3LengthSqr(ax) > 0.00001f) {
-            ax = Vector3Normalize(ax);
-            model.transform = MatrixRotate(ax, angle);
-        } else {
-            model.transform = MatrixIdentity(); //por si el terreno es casi plano pa que no se vuelva loco
-        }
-    }
-
-    void LookForward(Vector3 dir){
-        Vector3 forward = (Vector3){0.0f, 0.0f, 1.0f};
-
-        Vector3 ax = Vector3CrossProduct(forward, dir);
-        float angle = Vector3Angle(forward, dir);
-
-        model.transform = MatrixRotate(ax, angle);
-        return;
+    void ApplyRotation(Vector3 direction){
+        Quaternion qForwardTarget = QuaternionFromVector3ToVector3((Vector3){0,0,1}, direction);
+        Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, GetAvgNormal(position, size)); //Para las cuestas
+        Quaternion qTarget = QuaternionMultiply(qTiltTarget, qForwardTarget);
+        q = QuaternionNlerp(q, qTarget, 0.2f);
+        model.transform = QuaternionToMatrix(q);
     }
 
     Vector3 GetAvgNormal(Vector3 pos, Vector3 size){
