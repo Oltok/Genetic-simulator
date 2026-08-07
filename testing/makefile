@@ -12,6 +12,7 @@ OBJ = $(SRC:.cpp=.o)
 
 # Default Rule
 all: $(TARGET)
+	./$(TARGET)
 
 # Link the executable
 $(TARGET): $(OBJ)
