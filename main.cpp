@@ -76,7 +76,7 @@ public:
 
         targetPosition = position;
         isMoving = false;
-        speed = 0.1f;
+        speed = 0.4f;
 
         q = QuaternionFromMatrix(model.transform);
     }
@@ -85,9 +85,6 @@ public:
 
         DrawModel(model, position, 1, RED);
         DrawModelWires(model, position, 1, BLACK);
-
-        //debug
-        DrawCylinderEx(position, GetAvgNormal(position, size)*3+position, 0.05f, 0.05f, 14, RED);
     }
 
     void MoveTo() { 
@@ -122,14 +119,13 @@ public:
 
     void ApplyRotation(Vector3 direction){
         Quaternion qForwardTarget = QuaternionFromVector3ToVector3((Vector3){0,0,1}, direction);
-        Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, (GetAvgNormal(position, size))); //Para las cuestas
+        Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, (GetAvgNormal())); //Para las cuestas
         Quaternion qTarget = QuaternionMultiply(qTiltTarget, qForwardTarget);
         q = QuaternionNlerp(q, qTarget, 0.2f);
         model.transform = QuaternionToMatrix(q);
     }
 
-    Vector3 GetAvgNormal(Vector3 pos, Vector3 size){
-    
+    Vector3 GetAvgNormal(){ //supongo que seria mejor hacerla con un for loop?
         float x;
         float z;
         float y = 3.0f;
@@ -138,38 +134,39 @@ public:
         x = -size.x/2;
         z = -size.z/2;
         Ray tl = (Ray){
-        pos+(Vector3){x, -y, z},
-        pos+(Vector3){x, y, z}, 
+        position+(Vector3){x, -y, z},
+        (Vector3){0, 1, 0}, 
         };
 
         //top right
         x = size.x/2;
         z = -size.z/2;
         Ray tr = (Ray){
-        pos+(Vector3){x, -y, z},
-        pos+(Vector3){x, y, z}, 
+        position+(Vector3){x, -y, z},
+        (Vector3){0, 1, 0}, 
         };
 
         //bottom left
         x = -size.x/2;
         z = size.z/2;
         Ray bl = (Ray){
-        pos+(Vector3){x, -y, z},
-        pos+(Vector3){x, y, z}, 
+        position+(Vector3){x, -y, z},
+        (Vector3){0, 1, 0}, 
         };
 
         //bottom right
         x = size.x/2;
         z = size.z/2;
         Ray br = (Ray){
-        pos+(Vector3){x, -y, z},
-        pos+(Vector3){x, y, z}, 
+        position+(Vector3){x, -y, z},
+        (Vector3){0, 1, 0}, 
         };
 
         Vector3 tlCollision = GetRayCollisionMesh(tl, *pTerrainMesh, MatrixIdentity()).normal;
         Vector3 trCollision = GetRayCollisionMesh(tr, *pTerrainMesh, MatrixIdentity()).normal;
         Vector3 blCollision = GetRayCollisionMesh(bl, *pTerrainMesh, MatrixIdentity()).normal;
         Vector3 brCollision = GetRayCollisionMesh(br, *pTerrainMesh, MatrixIdentity()).normal;
+
 
         Vector3 avg = Vector3Add(tlCollision, trCollision);
         avg = Vector3Add(avg, blCollision);
@@ -325,8 +322,9 @@ int main(void){
     Texture2D terrainTexture = LoadTextureFromImage(colormapImage);
     UnloadImage(colormapImage);
 
-    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = terrainTexture;
-    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    //terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = terrainTexture;
+    //terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = LIME;
 
 
     //model loading - se ve que debe ir despues del InitWindow

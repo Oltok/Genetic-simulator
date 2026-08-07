@@ -26,6 +26,47 @@ int main(void)
     // Load image to create texture for the cube
     Model model = LoadModel("/home/sebas/Proyectos/Genetic-simulator/resources/models/gubi/modelo.obj");
 
+    BoundingBox bbox = GetModelBoundingBox(model);
+    Vector3 size = bbox.max - bbox.min;
+    Vector3 position = Vector3Zero();
+
+    float x;
+    float z;
+    float y = 3.0f;
+
+    //top left
+    x = -size.x/2;
+    z = -size.z/2;
+    Ray tl = (Ray){
+    position+(Vector3){x, -y, z},
+    position+(Vector3){0, 1, 0}, 
+    };
+
+    //top right
+    x = size.x/2;
+    z = -size.z/2;
+    Ray tr = (Ray){
+    position+(Vector3){x, -y, z},
+    position+(Vector3){0, 1, 0}, 
+    };
+
+    //bottom left
+    x = -size.x/2;
+    z = size.z/2;
+    Ray bl = (Ray){
+    position+(Vector3){x, -y, z},
+    position+(Vector3){0, 1, 0}, 
+    };
+
+    //bottom right
+    x = size.x/2;
+    z = size.z/2;
+    Ray br = (Ray){
+    position+(Vector3){x, -y, z},
+    position+(Vector3){0, 1, 0}, 
+    };
+
+
     //Target vectors
     Vector3 tiltTarget = (Vector3){0.4f, 1.0f, 0.12f};
     Vector3 forwardTarget = (Vector3){-0.8f, 0.0f, 0.5f};
@@ -81,6 +122,11 @@ int main(void)
 
                 DrawCylinderEx(Vector3Zero(), tiltTarget*3, 0.05f, 0.05f, 14, RED);
                 DrawCylinderEx(Vector3Zero(), forwardTarget*3, 0.05f, 0.05f, 14, GREEN);
+
+                DrawRay(tl, PURPLE);
+                DrawRay(tr, PURPLE);
+                DrawRay(bl, PURPLE);
+                DrawRay(br, PURPLE);
 
                 DrawText("Tilt", 10, 10, 12, RED);
                 DrawText("Forward", 10, 20, 12, GREEN);
