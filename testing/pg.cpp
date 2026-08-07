@@ -1,6 +1,7 @@
 
 #include "raylib.h"
 #include <raymath.h>
+#include <sys/types.h>
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -23,7 +24,7 @@ int main(void)
     camera.projection = CAMERA_PERSPECTIVE;
 
     // Load image to create texture for the cube
-    Model model = LoadModel("resources/models/gubi/modelo.obj");
+    Model model = LoadModel("/home/sebas/Proyectos/Genetic-simulator/resources/models/gubi/modelo.obj");
 
     //Target vectors
     Vector3 tiltTarget = (Vector3){0.4f, 1.0f, 0.12f};
@@ -45,7 +46,8 @@ int main(void)
         Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, tiltTarget);
         Quaternion qForwardTarget = QuaternionFromVector3ToVector3((Vector3){0,0,1}, forwardTarget);
         Quaternion qTarget = QuaternionMultiply(qTiltTarget, qForwardTarget);
-        model.transform = QuaternionToMatrix(qTarget);
+        q = QuaternionNlerp(q, qTarget, 0.2f);
+        model.transform = QuaternionToMatrix(q);
         //rotation += 1.0f;
 
         UpdateCamera(&camera, CAMERA_FREE);

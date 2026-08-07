@@ -1,4 +1,6 @@
 //#include <cstdio>
+#include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <raylib.h>
 #include <raymath.h> //mate y maticas
@@ -83,6 +85,9 @@ public:
 
         DrawModel(model, position, 1, RED);
         DrawModelWires(model, position, 1, BLACK);
+
+        //debug
+        DrawCylinderEx(position, GetAvgNormal(position, size)*3+position, 0.05f, 0.05f, 14, RED);
     }
 
     void MoveTo() { 
@@ -117,7 +122,7 @@ public:
 
     void ApplyRotation(Vector3 direction){
         Quaternion qForwardTarget = QuaternionFromVector3ToVector3((Vector3){0,0,1}, direction);
-        Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, GetAvgNormal(position, size)); //Para las cuestas
+        Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, (GetAvgNormal(position, size))); //Para las cuestas
         Quaternion qTarget = QuaternionMultiply(qTiltTarget, qForwardTarget);
         q = QuaternionNlerp(q, qTarget, 0.2f);
         model.transform = QuaternionToMatrix(q);
@@ -170,6 +175,7 @@ public:
         avg = Vector3Add(avg, blCollision);
         avg = Vector3Add(avg, brCollision);
         avg = Vector3Normalize(avg);
+        
 
         return avg;
     }
