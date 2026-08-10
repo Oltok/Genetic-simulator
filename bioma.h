@@ -44,7 +44,7 @@ public:
             CoordsData& coord = mapData[i];
 
             // logica de biomas
-            if (coord.height < 0.30f) {
+            if (coord.height < 0.3f) {
                 coord.biome = BaseBiome::ACQUATIC;
                 continue;
             }
@@ -112,13 +112,13 @@ public:
             mapData = tempMap;
         }
     }
-    static BaseBiome GetBaseBiome(float x, float z) {
-        
-        // coordenada del mundo a coordenada de la grid
+
+
+    static CoordsData GetMapData(float x, float z) {  // es la misma función que GetBaseBiome pero devuelve toda la info del bioma
+
         int gridX = (int)((x / worldWidth) * mapWidth);
         int gridZ = (int)((z / worldDepth) * mapHeight);
 
-        // para no salirnos de los limites
         if (gridX < 0) gridX = 0;
         if (gridX >= mapWidth) gridX = mapWidth -1;
         if (gridZ < 0) gridZ = 0;
@@ -126,7 +126,8 @@ public:
 
         int index = gridZ * mapWidth + gridX;
 
-        return mapData[index].biome;
+        return mapData[index];
+        
     }
 };
 
