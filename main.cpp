@@ -11,6 +11,7 @@
 
 #include "ui_util.h"
 #include "bioma.h"
+#include "recursos.h"
 
 //func declaration para poder usarlas donde sea -- Despues podriamos hacer un file que contenga todas las declaraciones globales
 float find_height(Mesh*, float, float);
@@ -18,8 +19,8 @@ Vector3 GetAvgNormal(Vector3, Vector3);
 
 
 //const and variables -- Despues podriamos hacer un file que contenga todas las declaraciones globales
-Model gubi_model;
 Model tree_model;
+Model gubi_model;
 Mesh* pTerrainMesh;
 const int ADN_LENGTH = 10;
 
@@ -179,31 +180,6 @@ public:
 };
 
 
-class Arbol 
-{
-public:
-
-    Vector3 position;
-    Model model;
-    BoundingBox bbox;
-
-    void Draw() const{
-        DrawModel(model, position, 1, WHITE);
-        //DrawModelWires(model, position, 1, BLACK);
-    }
-    
-};
-
-class Charco
-{
-public:
-
-    Vector3 position;
-    Vector2 size;
-    Color color;
-
-};
-
 //FUNCTION IMPLEMENTATION
 float find_height(Mesh* pMesh, float x, float z){
     Ray ray = {
@@ -301,7 +277,8 @@ int main(void){
             float worldZ = ((float) y / World::mapHeight) * World::worldDepth;
 
             //No podriamos hacer GetBaseBiome antes de pasarlo a coordenadas de mundo?
-            BaseBiome biome = World::GetBaseBiome(worldX, worldZ);   
+            CoordsData data = World::GetMapData(worldX, worldZ);
+            BaseBiome biome = data.biome; 
             Color biomeColor = BLACK;
 
             switch (biome) {
@@ -322,19 +299,16 @@ int main(void){
     Texture2D terrainTexture = LoadTextureFromImage(colormapImage);
     UnloadImage(colormapImage);
 
-    //terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = terrainTexture;
-    //terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = LIME;
+    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = terrainTexture;
+    terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    //terrainModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = LIME;
 
-
-    //model loading - se ve que debe ir despues del InitWindow
-    //Arbol
-    Model tree_model = LoadModel("resources/models/arbol/modelo.obj");
-    BoundingBox base_tree_bbox = GetModelBoundingBox(tree_model);
 
     //Gubi - Placeholder
     gubi_model = LoadModel("resources/models/gubi/modelo.obj");
-
+    // Arbol - Placeholder para comidas y bebidas
+    tree_model = LoadModel("resources/models/arbol/modelo.obj");
+    BoundingBox base_tree_bbox ? GetModelBoundingBox(tree_model);
 
     // camera init    
     Camera3D camera = { 0 };
@@ -348,69 +322,74 @@ int main(void){
     camera.fovy = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    //cosas en el mundo
-    int n_arboles = 0; //500
-    int n_charcos = 0; //10
     
     Gubi Juanubi;
     
-    std::vector<Charco> charcos;
+    std::vector<Food> comidas;
+    std::vector<Drink> bebidas;
 
-    for (int i = 0; i < n_charcos; i++) {
+    float step = 30.0f;
 
-        Charco agua;
-        agua.size = (Vector2){(float)GetRandomValue(20, 150), (float)GetRandomValue(20, 150)};
-        agua.position = (Vector3){(float)GetRandomValue(0, terrainWidth), 1.0f,  (float)GetRandomValue(0, terrainDepth)};
-        agua.color = BLUE;
-        
-        charcos.push_back(agua);
-    }
+    for (float x = 40; x < terrainWidth - 40; x += step) {
+        for (float z = 40; z < terrainDepth - 40; z += step) {
 
+            CoordsData data = World::GetMapData(x, z);
 
-    std::vector<Arbol> arboles;
-    
+            if (data.biome == BaseBiome::ACQUATIC) continue;
 
-    for (int i = 0; i < n_arboles; i++) {
-                    
-        Arbol arbo;
-        arbo.model = tree_model; //TODO moverlo a su funcion de inizializacion, como la de gubi
-        
-        bool posicionwena = false;
-        while (!posicionwena) {
+            //probabilidad de aparicion de comida, primero pasada a porcentaje y luego * 0.4 para no saturar el mapa
+            float prob = data.quantity * 40.0f;
+            if (GetRandomValue(0,100) > prob) continue;
 
-            float pos_x = (float)GetRandomValue(0, terrainWidth);
-            float pos_z = (float)GetRandomValue(0, terrainDepth);
-        
-            //encontramos la altura en esa posicion y la variamos un poco para tener arboles con diferentes alturas
-            arbo.position = (Vector3){pos_x, find_height(pTerrainMesh, pos_x, pos_z)+GetRandomValue(-1, 0), pos_z};
+            int chanceFood = 50;
+            float maxFood = 30.0f;
+            float maxDrink = 30.0f;
 
-            //La BBox original esta en 0,0,0. Creamos una nueva y le sumamos la posicion del arbol que creamos.
-            BoundingBox cajaarbo;
-            cajaarbo.max = Vector3Add(base_tree_bbox.max, arbo.position);
-            cajaarbo.min = Vector3Add(base_tree_bbox.min,  arbo.position);
-
-            arbo.bbox = cajaarbo;
-
-            bool colisionagua = false;
-
-            for (const auto &agua : charcos){
-                BoundingBox cajacharco = {
-
-                    (Vector3){ agua.position.x - agua.size.x/2.0f, 0.0f, agua.position.z - agua.size.y/2.0f },
-                    (Vector3){ agua.position.x + agua.size.x/2.0f, 1.0f, agua.position.z + agua.size.y/2.0f }
-                };
-
-                if (CheckCollisionBoxes(cajaarbo, cajacharco)) {
-                    colisionagua = true;
-                    break;
-                }
+            //reglas de aparición de alimentos para cada bioma
+            if (data.biome == BaseBiome::DESERT) {
+                chanceFood = 90;    // 90% comida 10% agua
+                maxFood = 15.0f;
+                maxDrink = 30.0f;
             }
+            else if (data.biome == BaseBiome::JUNGLE) {
+                chanceFood = 60;
+                maxFood = 40.0f;
+                maxDrink = 40.0f;
+            }
+            else if (data.biome == BaseBiome::FIELD) {
+                chanceFood = 50;
+                maxFood = 30.0f;
+                maxDrink = 30.0f;
+            }
+            else if (data.biome == BaseBiome::ICE) {
+                chanceFood = 10;
+                maxFood = 30.0f;
+                maxDrink = 15.0f;
+            }
+            else if (data.biome == BaseBiome::TUNDRA) {
+                chanceFood = 40;
+                maxFood = 20.0f;
+                maxDrink = 40.0f;
+            }
+            
+            bool isFood = GetRandomValue(0, 100) <= chanceFood;
 
-            if (!colisionagua) {
-                posicionwena = true;
+            if (isFood) {
+                Food f;
+                f.model = tree_model;
+                f.position = (Vector3){x, find_height(pTerrainMesh, x, z), z};
+                f.quality = data.quality;
+                f.quantity = maxFood * data.quantity;
+                comidas.push_back(f);
+            } else {
+                Drink d;
+                d.model = tree_model;
+                d.position = (Vector3){x, find_height(pTerrainMesh, x, z), z};
+                d.quality = data.quality;
+                d.quantity = maxDrink * data.quantity;
+                bebidas.push_back(d);
             }
         }
-        arboles.push_back(arbo);
     }
 
     std::string selected_speed = "x1";
@@ -440,19 +419,21 @@ int main(void){
 
         Juanubi.MoveTo();
 
+        float deltaTime = GetFrameTime();
+        for (auto& f : comidas) {
+            f.Update(deltaTime);
+        }
+        for (auto& d : bebidas) {
+            d.Update(deltaTime);
+        }
+
+
         BeginDrawing();
             ClearBackground(SKYBLUE);
             BeginMode3D(camera);
                 
                 DrawModel(terrainModel, Vector3Zero(), 1, WHITE);
                 DrawModelWires(terrainModel, Vector3Zero(), 1, LIGHTGRAY);
-                
-                for (const auto &agua : charcos) {
-
-                    DrawPlane(agua.position, agua.size, agua.color);
-
-                }
-
                 
                 // para ver donde va (me ayuda al debugging)
                 if (Juanubi.isMoving) {
@@ -462,10 +443,13 @@ int main(void){
 
                 Juanubi.Draw();
 
-                for (const auto &arbo : arboles) {
-
-                    arbo.Draw();
+                for (auto& f : comidas) {
+                    f.Draw();
                 }
+                for (auto& d : bebidas) {
+                    d.Draw();
+                }
+
 
             EndMode3D();
 
@@ -477,7 +461,6 @@ int main(void){
         EndDrawing();
     }
 
-    UnloadModel(tree_model); //Pongo el unload fuera del loop porque seguiremos spawneando
     UnloadTexture(terrainTexture);
 
     CloseWindow();
