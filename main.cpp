@@ -1,6 +1,3 @@
-//#include <cstdio>
-#include <cstdio>
-#include <cstdlib>
 #include <string>
 #include <raylib.h>
 #include <raymath.h> //mate y maticas
@@ -119,6 +116,8 @@ public:
     }
 
     void ApplyRotation(Vector3 direction){
+                                                                                  //0,0,1 es como el vector forward global
+                                                                                  //0,0,1 es el vector up
         Quaternion qForwardTarget = QuaternionFromVector3ToVector3((Vector3){0,0,1}, direction);
         Quaternion qTiltTarget = QuaternionFromVector3ToVector3((Vector3){0,1,0}, (GetAvgNormal())); //Para las cuestas
         Quaternion qTarget = QuaternionMultiply(qTiltTarget, qForwardTarget);
