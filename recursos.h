@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <raylib.h>
 #include <raymath.h>
 
@@ -8,6 +9,7 @@ class Recurso
     public:
         Vector3 position;
         Model model;
+        Texture2D billboard;
         Color tinte; //temporal para distinguir comida y bebida
         float quantity;
         float quality;
@@ -32,9 +34,10 @@ class Recurso
             }
         }
 
-        void Draw() {
+        void Draw(Camera cam) {
             if (!isEmpty) {
-                DrawModel(model, position, 1.0f, tinte);
+                if (billboard.height!=0) {DrawBillboard(cam, billboard, position, 10.0f, tinte);}
+                else {DrawModel(model, position, 1.0f, tinte);}
             } else {
                 DrawModelWires(model, position, 1.0f, GRAY);
             }
@@ -47,7 +50,7 @@ class Food: public Recurso
     public: 
 
         Food() : Recurso() {
-            tinte = GREEN;
+            tinte = WHITE;
 
         }
 
